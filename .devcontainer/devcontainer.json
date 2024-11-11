@@ -2,7 +2,7 @@
   "name": "Home Assistant Dev",
   "context": "..",
   "dockerFile": "../Dockerfile.dev",
-  "postCreateCommand": "git config --global user.email '03-better-blunder@icloud.com' && git config --global user.name 'betterblunder' && git config --global --add safe.directory ${containerWorkspaceFolder} && script/setup",
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && development/setup && script/setup",
   "postStartCommand": "script/bootstrap",
   "containerEnv": {
     "PYTHONASYNCIODEBUG": "1"
@@ -17,6 +17,12 @@
     "GIT_EDITOR=code --wait",
     "--security-opt",
     "label=disable"
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh/id_homeassistant,target=/home/vscode/.ssh/id_homeassistant,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.ssh/id_homeassistant.pub,target=/home/vscode/.ssh/id_homeassistant.pub,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.ssh/id_motioneye,target=/home/vscode/.ssh/id_github,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.ssh/id_motioneye.pub,target=/home/vscode/.ssh/id_github.pub,type=bind,consistency=cached,readonly"
   ],
   "customizations": {
     "vscode": {

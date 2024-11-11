@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+git config --global user.email '03-better-blunder@icloud.com'
+git config --global user.name 'betterblunder'
+
+sudo chown vscode:vscode ~/.ssh
+echo "
+Host home-assistant
+  user root
+  HostName homeassistant.local
+  IdentityFile ~/.ssh/id_homeassistant
+  Port 8047
+Host github.com
+  User git
+  HostName github.com
+  IdentityFile ~/.ssh/id_github
+  IdentitiesOnly yes
+" > ~/.ssh/config
