@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+"""Lorem ipsum."""
+from pathlib import Path
+import subprocess
+
+EXPECTED_DEV_COMPONENTS = {"cloudflare"}
+EXPECTED_HACS_COMPONENTS = {"hacs"} | {
+    "network_scanner",
+    "peloton",
+    "snoo",
+    "waste_collection_schedule",
+}
+
+
+def _get_custom_components(host: str) -> set[str]:
+    stdout, stderr = subprocess.Popen(  # noqa: S602
+        f"ssh {host} ls config/custom_components",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ).communicate()
+    return set(stdout.decode().split())
+
+
+def _copy_from_board(host: str, root_dir: Path, components: set[str]) -> None:
+    for component in components:
+        results = subprocess.Popen(  # noqa: S602
+            f"rsync -av {host}:config/custom_components/{component} {(root_dir / "homeassistant" / "components")}",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = results.communicate()
+        assert (
+            results.returncode == 0
+        ), f"[{component} rsync failed with: {stderr.decode()}"
+        print(stderr.decode())  # noqa: T201
+
+
+# rsync -av --exclude={'hacs','network_scanner','peloton','snoo','waste_collection_schedule'} home-assistant:config/custom_components/* homeassistant/components
+if __name__ == "__main__":
+    HOSTNAME = "home-assistant"
+    ROOT_DIR = Path(__file__).parents[1]
+    custom_components = _get_custom_components(HOSTNAME)
+
+    undeclared_components = custom_components - (
+        EXPECTED_DEV_COMPONENTS | EXPECTED_HACS_COMPONENTS
+    )
+    assert (
+        undeclared_components == set()
+    ), f"The following components must be declared as under development or pulled from HACS: {sorted(undeclared_components)}"
+
+    _copy_from_board(HOSTNAME, ROOT_DIR, custom_components - EXPECTED_HACS_COMPONENTS)
