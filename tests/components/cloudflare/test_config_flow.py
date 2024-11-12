@@ -132,7 +132,7 @@ async def test_user_form_unexpected_exception(
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_user_form_single_instance_allowed(hass: HomeAssistant) -> None:
+async def test_user_form_multiple_instances_allowed(hass: HomeAssistant) -> None:
     """Test that configuring more than one instance is rejected."""
     entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_CONFIG)
     entry.add_to_hass(hass)
@@ -142,8 +142,8 @@ async def test_user_form_single_instance_allowed(hass: HomeAssistant) -> None:
         context={CONF_SOURCE: SOURCE_USER},
         data=USER_INPUT,
     )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "single_instance_allowed"
+
+    assert result["type"] is FlowResultType.FORM
 
 
 async def test_reauth_flow(hass: HomeAssistant, cfupdate_flow: MagicMock) -> None:
