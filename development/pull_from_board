@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 """Lorem ipsum."""
+
+import logging
 from pathlib import Path
 import subprocess
 
+LOGGER = logging.getLogger("pull_from_board")
 EXPECTED_DEV_COMPONENTS = {"cloudflare"}
 EXPECTED_HACS_COMPONENTS = {"hacs"} | {
     "network_scanner",
@@ -34,11 +37,12 @@ def _copy_from_board(host: str, root_dir: Path, components: set[str]) -> None:
         assert (
             results.returncode == 0
         ), f"[{component} rsync failed with: {stderr.decode()}"
-        print(stderr.decode())  # noqa: T201
+        LOGGER.debug(stderr.decode())
 
 
 # rsync -av --exclude={'hacs','network_scanner','peloton','snoo','waste_collection_schedule'} home-assistant:config/custom_components/* homeassistant/components
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     HOSTNAME = "home-assistant"
     ROOT_DIR = Path(__file__).parents[1]
     custom_components = _get_custom_components(HOSTNAME)
