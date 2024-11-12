@@ -18,4 +18,5 @@ Host github.com
 
 pip install -U \
   -c homeassistant/package_constraints.txt \
-  GitPython
+  GitPython \
+  fabric

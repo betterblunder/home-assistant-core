@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 import subprocess
 
+from fabric.connection import Connection
+
 LOGGER = logging.getLogger("pull_from_board")
 EXPECTED_DEV_COMPONENTS = {"cloudflare"}
 EXPECTED_HACS_COMPONENTS = {"hacs"} | {
@@ -16,13 +18,8 @@ EXPECTED_HACS_COMPONENTS = {"hacs"} | {
 
 
 def _get_custom_components(host: str) -> set[str]:
-    stdout, stderr = subprocess.Popen(  # noqa: S602
-        f"ssh {host} ls config/custom_components",
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ).communicate()
-    return set(stdout.decode().split())
+    with Connection(host) as c, c.sftp() as sftp:
+        return set(sftp.listdir("config/custom_components"))
 
 
 def _copy_from_board(host: str, root_dir: Path, components: set[str]) -> None:
@@ -37,7 +34,7 @@ def _copy_from_board(host: str, root_dir: Path, components: set[str]) -> None:
         assert (
             results.returncode == 0
         ), f"[{component} rsync failed with: {stderr.decode()}"
-        LOGGER.debug(stderr.decode())
+        LOGGER.debug(stdout.decode())
 
 
 # rsync -av --exclude={'hacs','network_scanner','peloton','snoo','waste_collection_schedule'} home-assistant:config/custom_components/* homeassistant/components

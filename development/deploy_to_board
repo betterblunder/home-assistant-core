@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """Lorem ipsum."""
 
+import json
 import logging
 from pathlib import Path
 import subprocess
 
+from fabric.connection import Connection
 from git import Commit, Repo
 
 LOGGER = logging.getLogger("deploy_to_board")
@@ -18,6 +20,20 @@ def get_modified_components(repo_root: Path, modified_files: set[Path]) -> set[s
         for f in modified_files
         if f.is_relative_to(components_root)
     }
+
+
+def _patch_package_version(host: str, component: str) -> None:
+    """Resolve the disagreement in package requirements between home assistant 'official' components and 'custom' components.
+
+    This function is required because 'official' components are not allowed to specify a version in their manifest, while 'custom' components MUST do so. The version number doesn't actually matter, so we just write it as an arbitrary, hardcoded value.
+    """
+    with Connection(host) as c, c.sftp() as sftp:
+        manifest_file = f"config/custom_components/{component}/manifest.json"
+        with sftp.open(manifest_file) as f:
+            manifest_data = json.load(f)
+        with sftp.open(manifest_file, "w") as f:
+            manifest_data["version"] = "0.0.1"
+            json.dump(manifest_data, f, indent=2)
 
 
 def push_to_board(repo_root: Path, host: str, modified_components: set[str]) -> None:
@@ -34,7 +50,8 @@ def push_to_board(repo_root: Path, host: str, modified_components: set[str]) -> 
         assert (
             results.returncode == 0
         ), f"[{component} rsync failed with: {stderr.decode()}"
-        LOGGER.debug(stderr.decode())
+        LOGGER.debug(stdout.decode())
+        _patch_package_version(host, component)
 
 
 def _get_common_ancestor_commit(repo: Repo, base_branch: str) -> Commit:
