@@ -33,7 +33,7 @@ script/bootstrap
 
 pre-commit install
 uv pip install -e . --config-settings editable_mode=compat --constraint homeassistant/package_constraints.txt
-# python3 -m script.translations develop --all # <-- seems to be broken
+python3 -m script.translations develop --all
 
 hass --script ensure_config -c config
 
