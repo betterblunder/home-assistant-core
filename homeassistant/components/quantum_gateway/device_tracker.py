@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from quantum_gateway import QuantumGatewayScanner
 from requests.exceptions import RequestException
 import voluptuous as vol
 
@@ -17,6 +16,8 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SSL
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+
+from .lib import QuantumGatewayScanner
 
 _LOGGER = logging.getLogger(__name__)
 
