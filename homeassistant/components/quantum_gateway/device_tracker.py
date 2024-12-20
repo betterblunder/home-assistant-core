@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .lib import QuantumGatewayScanner
+from .lib import ConnectedDevice, QuantumGatewayScanner
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +26,6 @@ DEFAULT_HOST = "myfiosgateway.com"
 PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_HOST, default=DEFAULT_HOST): cv.string,
-        vol.Optional(CONF_SSL, default=True): cv.boolean,
         vol.Required(CONF_PASSWORD): cv.string,
     }
 )
@@ -49,13 +48,10 @@ class QuantumGatewayDeviceScanner(DeviceScanner):
 
         self.host = config[CONF_HOST]
         self.password = config[CONF_PASSWORD]
-        self.use_https = config[CONF_SSL]
         _LOGGER.debug("Initializing")
 
         try:
-            self.quantum = QuantumGatewayScanner(
-                self.host, self.password, self.use_https
-            )
+            self.quantum = QuantumGatewayScanner(self.host, self.password)
             self.success_init = self.quantum.success_init
         except RequestException:
             self.success_init = False
@@ -76,3 +72,11 @@ class QuantumGatewayDeviceScanner(DeviceScanner):
     def get_device_name(self, device):
         """Return the name of the given device or None if we don't know."""
         return self.quantum.get_device_name(device)
+
+    def get_extra_attributes(self, device: str) -> dict:
+        """Get the extra attributes of a device."""
+        dev = self.quantum.connected_devices.get(device)
+        if dev is None:
+            _LOGGER.warning(f"Device {device} not found")  # noqa: G004
+            return {}
+        return dict(zip(ConnectedDevice.headers(), dev.row_elements(), strict=True))

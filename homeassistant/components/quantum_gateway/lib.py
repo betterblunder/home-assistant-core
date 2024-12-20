@@ -1,3 +1,4 @@
+"""Custom Implementation of Quantum Gateway lib."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -6,7 +7,7 @@ from http import HTTPStatus
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 import weakref
 
 import esprima
@@ -110,7 +111,7 @@ class ConnectedDevice:
 
     def row_elements(self) -> list[str]:
         return [
-            self.name,
+            self.name or self.hostname,
             self.ip,
             self.mac,
             self.connect_type.display(),
@@ -269,7 +270,7 @@ class Gateway(ABC):
         return NotImplementedError()
 
     @abstractmethod
-    def get_connected_devices(self) -> Dict[str, ConnectedDevice]:
+    def get_connected_devices(self) -> dict[str, ConnectedDevice]:
         """Gets the connected devices as a MAC address -> hostname map."""
         return NotImplementedError()
 
@@ -520,11 +521,11 @@ class QuantumGatewayScanner:
         else:
             raise NotImplementedError
 
-    def scan_devices(self) -> List[str]:
+    def scan_devices(self) -> list[str]:
         self.connected_devices = {}
         if self._gateway.check_auth():
             self.connected_devices = self._gateway.get_connected_devices()
         return self.connected_devices.keys()
 
     def get_device_name(self, device: str) -> str:
-        return self.connected_devices.get(device)
+        return self.connected_devices.get(device).name
