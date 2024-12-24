@@ -1,4 +1,5 @@
 """Custom Implementation of Quantum Gateway lib."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -20,10 +21,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ConnectedTo(Enum):
+    """Enum for connected device types."""
+
     ROUTER = "br-lan"
     EXTENDER_1 = "br-lan1"
 
     def display(self) -> str:
+        """Return a human-readable string for the connected device type."""
         return {
             ConnectedTo.ROUTER: "Router",
             ConnectedTo.EXTENDER_1: "Extender",
@@ -31,12 +35,16 @@ class ConnectedTo(Enum):
 
 
 class Mobility(Enum):
+    """Enum for device mobility."""
+
     PORTABLE = "Portable"
     STATIONARY = "Stationary"
     UNKNOWN = ""
 
 
 class Port(Enum):
+    """Enum for device port."""
+
     ATH0 = "ath0"
     ATH1 = "ath1"
     ATH11 = "ath11"
@@ -46,6 +54,8 @@ class Port(Enum):
 
 
 class ConnectionType(Enum):
+    """Enum for device connection type."""
+
     WIFI_5_GHZ = "5G"
     WIFI_5H_GHZ = "5G_H"
     WIFI_2_4_GHZ = "2.4G"
@@ -55,6 +65,7 @@ class ConnectionType(Enum):
     NONE = "unknown"
 
     def display(self) -> str:
+        """Return a human-readable string for the connection type."""
         return {
             ConnectionType.WIFI_5_GHZ: "5 GHz",
             ConnectionType.WIFI_5H_GHZ: "5 GHz",
@@ -67,6 +78,8 @@ class ConnectionType(Enum):
 
 
 class ConnectionInterface(Enum):
+    """Enum for device connection interface."""
+
     UNKNOWN = ""
     ATH0 = "ath0"
     WL0 = "wl0"
@@ -78,6 +91,7 @@ class ConnectionInterface(Enum):
     ATH11 = "ath11"
 
     def display(self) -> str:
+        """Return a human-readable string for the connection interface."""
         return {
             ConnectionInterface.UNKNOWN: ConnectedTo.ROUTER,
             ConnectionInterface.ATH0: ConnectedTo.ROUTER,
@@ -92,24 +106,32 @@ class ConnectionInterface(Enum):
 
 
 def _normalize(input: str) -> str | None:
+    """Normalize input string."""
     return input if input not in {"", "(null)", "n/a"} else None
 
 
 class ConnectedDevice:
-    def __init__(self, data: dict[str, str]):
+    """Class to hold device information."""
+
+    def __init__(self, data: dict[str, str]) -> None:
+        """Initialize the device."""
         self._raw_data = data
 
     def __str__(self) -> str:
+        """Return a string representation of the device."""
         return json.dumps(self._as_dict(), sort_keys=True, indent=1)
 
     def add_station_info(self, data: dict[str, str]):
+        """Add station info to device."""
         self._raw_data = data | self._raw_data
 
     @staticmethod
     def headers() -> list[str]:
+        """Return headers for the device."""
         return ["name", "ip", "mac", "connect_type", "connected_to"]
 
     def row_elements(self) -> list[str]:
+        """Return row elements for the device."""
         return [
             self.name or self.hostname,
             self.ip,
@@ -147,134 +169,161 @@ class ConnectedDevice:
 
     @property
     def connected_to(self) -> ConnectedTo:
+        """Return the device connected to."""
         return ConnectedTo(self._raw_data["bridge_port"])
 
     @property
     def hostname(self) -> str:
+        """Return the device hostname."""
         return self._raw_data["hostname"]
 
     @property
     def ip(self) -> str:
+        """Return the device IP address."""
         return self._raw_data["ip"]
 
     @property
     def mac(self) -> str:
+        """Return the device MAC address."""
         return self._raw_data["mac"]
 
     @property
     def mac_vendor(self) -> str | None:
+        """Return the device MAC vendor."""
         return _normalize(self._raw_data["mac_vendor"])
 
     @property
     def name(self) -> str | None:
+        """Return the device name."""
         name = _normalize(self._raw_data["name"])
         return name.replace("_", " ") if name else None
 
     @property
     def suggested_name(self) -> str | None:
+        """Return the device suggested name."""
         return _normalize(self._raw_data["suggested_name"])
 
     @property
     def ipv6(self) -> str | None:
+        """Return the device IPv6 address."""
         return _normalize(self._raw_data["ipv6"])
 
     @property
     def device_type(self) -> str | None:
+        """Return the device type."""
         return _normalize(self._raw_data["device"])
 
     @property
     def device_firmware(self) -> str | None:
+        """Return the device firmware."""
         return _normalize(self._raw_data["device_firmware"])
 
     @property
     def device_manufacturer(self) -> str | None:
+        """Return the device manufacturer."""
         return _normalize(self._raw_data["device_manufacturer"])
 
     @property
     def device_model(self) -> str | None:
+        """Return the device model."""
         return _normalize(self._raw_data["device_model"])
 
     @property
     def device_sub_model(self) -> str | None:
+        """Return the device sub model."""
         return _normalize(self._raw_data["device_sub_model"])
 
     @property
     def device_product(self) -> str | None:
+        """Return the device product."""
         return _normalize(self._raw_data["device_product"])
 
     @property
     def os(self) -> str | None:
+        """Return the device OS."""
         return _normalize(self._raw_data["device_os"])
 
     @property
     def mobility(self) -> Mobility:
+        """Return the device mobility."""
         return Mobility(self._raw_data["mobility"])
 
     @property
     def time_first_seen(self) -> str:
+        """Return the device first seen time."""
         return self._raw_data["time_first_seen"]
 
     @property
     def time_last_active(self) -> str:
+        """Return the device last active time."""
         return self._raw_data["time_last_active"]
 
     @property
     def uptime(self) -> str:
+        """Return the device uptime."""
         return self._raw_data["uptime"]
 
     @property
     def port(self) -> Port:
+        """Return the device port."""
         return Port(self._raw_data["port"])
 
     @property
     def pre_port(self) -> Port:
+        """Return the device pre port."""
         return Port(self._raw_data["pre_port"])
 
     @property
     def connect_type(self) -> ConnectionType:
+        """Return the device connection type."""
         return ConnectionType(self._raw_data.get("connect_type", "unknown"))
 
     @property
     def connection_interface(self) -> ConnectionInterface:
+        """Return the device connection interface."""
         return ConnectionInterface(self._raw_data.get("connect_intf", ""))
 
 
 def _encode_luci_string(unencoded_string):
-    """Encodes a string to be sent to a G3100 gateway in a "luci_" POST parameter."""
+    """Encode a string to be sent to a G3100 gateway in a "luci_" POST parameter."""
     md5_hash = hashlib.md5(unencoded_string.encode("ascii")).hexdigest()
     return hashlib.sha512(md5_hash.encode("ascii")).hexdigest()
 
 
 def _encode_luci_password(unencoded_string, token):
-    """Encodes a string to be sent to a G3100 gateway in a "luci_" POST parameter."""
+    """Encode a string to be sent to a G3100 gateway in a "luci_" POST parameter."""
     md5_hash = hashlib.md5(unencoded_string.encode("ascii")).hexdigest()
     sha_hash = hashlib.sha512(md5_hash.encode("ascii")).hexdigest()
     return hashlib.sha512((token + sha_hash).encode("ascii")).hexdigest()
 
 
 class Gateway(ABC):
-    def __init__(self, local_only: bool | None = None, cache_dir: Path | None = None):
+    """Gateway class."""
+
+    def __init__(
+        self, local_only: bool | None = None, cache_dir: Path | None = None
+    ) -> None:
+        """Initialize the gateway."""
         super().__init__()
 
-        self.connected_devices = {}
+        self.connected_devices: dict[str, ConnectedDevice] = {}
         self.success_init = False
         self._local_only = local_only
         self._cache_dir = cache_dir
 
     @abstractmethod
     def check_auth(self) -> bool:
-        """Attempts to authenticate with the device.
+        """Attempt to authenticate with the device.
 
         Returns whether or not authentication succeeded.
         """
-        return NotImplementedError()
 
     @abstractmethod
     def get_connected_devices(self) -> dict[str, ConnectedDevice]:
-        """Gets the connected devices as a MAC address -> hostname map."""
-        return NotImplementedError()
+        """Get the connected devices as a MAC address -> hostname map."""
 
     def get_cache_file(self) -> Path | None:
+        """Return the cache file path."""
         if self._cache_dir:
             self._cache_dir.mkdir(exist_ok=True, parents=True)
             return self._cache_dir / "log.json"
@@ -282,13 +331,16 @@ class Gateway(ABC):
 
 
 class Gateway3100(Gateway):
+    """Gateway3100 class."""
+
     def __init__(
         self,
         host: str,
         password: str,
         local_only: bool | None = None,
         cache_dir: Path | None = None,
-    ):
+    ) -> None:
+        """Initialize the gateway."""
         super().__init__(local_only, cache_dir)
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -298,6 +350,7 @@ class Gateway3100(Gateway):
         self.username = "admin"
         self.password = password
         self.token = ""
+        self.loginToken = ""
 
         self.session = requests.Session()
 
@@ -313,20 +366,23 @@ class Gateway3100(Gateway):
             )
 
     def __del__(self):
-        print("destroying session")
+        """Destroy the session."""
+        _LOGGER.info("Destroying Gateway client session")
         self.session.close()
 
     @classmethod
-    def _is_valid_host(cls, host):
+    def is_valid_host(cls, host):
+        """Check if the host is a valid host."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         return (
             requests.get(
-                "https://" + host + "/loginStatus.cgi", verify=False
+                "https://" + host + "/loginStatus.cgi", verify=False, timeout=TIMEOUT
             ).status_code
             != HTTPStatus.NOT_FOUND
         )
 
     def get_connected_devices(self):
+        """Get connected devices."""
         if self._local_only:
 
             @dataclass
@@ -334,7 +390,7 @@ class Gateway3100(Gateway):
                 status_code: HTTPStatus
                 text: str
 
-            with open(self.get_cache_file(), "r") as f:
+            with open(self.get_cache_file(), encoding="utf-8") as f:
                 result = json.load(f)
                 res = Ret(status_code=result["status_code"], text=result["text"])
         else:
@@ -444,7 +500,7 @@ class Gateway3100(Gateway):
                 # Store the XSRF token for use in future requests.
                 self.token = res.json()["token"]
                 return True
-        _LOGGER.warning(f"{res.status_code}: {res.reason}")
+        _LOGGER.warning(f"{res.status_code}: {res.reason}")  # noqa: G004
         return False
 
     def _attempt_old_login(self):
@@ -483,8 +539,10 @@ class Gateway3100(Gateway):
 
         else:
             _LOGGER.debug("unexpected response code: %s", res.status_code)
+        return False
 
     def check_auth(self):
+        """Check authentication."""
         if self._check_login_status():
             return True
 
@@ -495,37 +553,45 @@ class Gateway3100(Gateway):
 
 
 class QuantumGatewayScanner:
+    """Quantum Gateway Scanner."""
+
     def __init__(
         self,
         host: str,
         password: str,
-        use_https: bool | None = True,
         local_only: bool = False,
         cache_dir: Path | None = None,
-    ):
+    ) -> None:
+        """Initialize the scanner."""
         if local_only and cache_dir is None:
             error_message = "'cache_dir' must be specified if using 'local_only'"
             _LOGGER.fatal(error_message)
             raise AssertionError(error_message)
         self._local_only = local_only
         self._cache_dir = cache_dir
+        self.connected_devices: dict[str, ConnectedDevice] = {}
 
-        self._gateway = self._get_gateway(host, password, use_https)
+        self._gateway = self._get_gateway(host, password)
         self.success_init = self._gateway.check_auth()
 
-    def _get_gateway(self, host, password, use_https) -> Gateway:
+    def _get_gateway(self, host, password) -> Gateway:
         if self._local_only:
             return Gateway3100(host, password, self._local_only, self._cache_dir)
-        if Gateway3100._is_valid_host(host):
+        if Gateway3100.is_valid_host(host):
             return Gateway3100(host, password, self._local_only, self._cache_dir)
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
     def scan_devices(self) -> list[str]:
+        """Scan for new devices and return a list of found MACs."""
         self.connected_devices = {}
         if self._gateway.check_auth():
             self.connected_devices = self._gateway.get_connected_devices()
-        return self.connected_devices.keys()
+        return list(self.connected_devices.keys())
 
-    def get_device_name(self, device: str) -> str:
-        return self.connected_devices.get(device).name
+    def get_device_name(self, device: str) -> str | None:
+        """Return the name of the given device or None if we don't know."""
+        return (
+            self.connected_devices[device].name
+            if device in self.connected_devices
+            else None
+        )
