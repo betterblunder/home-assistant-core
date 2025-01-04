@@ -65,7 +65,7 @@ def add_entities(
         if mac in tracked:
             continue
 
-        new_tracked.append(QuantumGatewayDeviceEntity(router, device))
+        new_tracked.append(QuantumGatewayDeviceEntity(device))
         tracked.add(mac)
 
     async_add_entities(new_tracked)
@@ -74,10 +74,9 @@ def add_entities(
 class QuantumGatewayDeviceEntity(ScannerEntity):
     """Represent a tracked device."""
 
-    def __init__(self, router: QuantumGatewayScanner, device: ConnectedDevice) -> None:
+    def __init__(self, device: ConnectedDevice) -> None:
         """Initialize the device."""
         super().__init__()
-        self._router = router
         self._device = device
         self.has_entity_name = True
         self.name = self.hostname
@@ -90,7 +89,7 @@ class QuantumGatewayDeviceEntity(ScannerEntity):
     @property
     def is_connected(self) -> bool:
         """Return true if the device is connected to the network."""
-        return self.mac_address in self._router.connected_devices
+        return self._device.is_connected
 
     @property
     def hostname(self) -> str:
@@ -113,7 +112,7 @@ class QuantumGatewayDeviceEntity(ScannerEntity):
         return SourceType.ROUTER
 
     @property
-    def extra_state_attributes(self) -> dict[str, str]:
+    def extra_state_attributes(self) -> dict[str, str | bool | dict[str, str]]:
         """Return the state attributes."""
         return dict(
             zip(ConnectedDevice.headers(), self._device.row_elements(), strict=True)
