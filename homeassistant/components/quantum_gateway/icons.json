@@ -1,0 +1,7 @@
+{
+  "services": {
+    "update_router": {
+      "service": "mdi:wifi"
+    }
+  }
+}

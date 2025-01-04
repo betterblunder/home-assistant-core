@@ -11,11 +11,13 @@ from pathlib import Path
 from typing import Any
 import weakref
 
+import aiofiles
+import aiohttp
+import aiohttp.client_exceptions
 import esprima
-import requests
 import urllib3
 
-TIMEOUT = 5
+TIMEOUT = aiohttp.ClientTimeout(5)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,16 +130,24 @@ class ConnectedDevice:
     @staticmethod
     def headers() -> list[str]:
         """Return headers for the device."""
-        return ["name", "ip", "mac", "connect_type", "connected_to"]
+        return [
+            "name",
+            "ip",
+            "mac",
+            "connect_type",
+            "connected_to",
+            # "full_state",
+        ]
 
     def row_elements(self) -> list[str]:
         """Return row elements for the device."""
         return [
-            self.name or self.hostname,
+            self.display_name,
             self.ip,
             self.mac,
             self.connect_type.display(),
             self.connection_interface.display(),
+            # self._as_dict(),
         ]
 
     def _as_dict(self) -> dict[str, Any]:
@@ -171,6 +181,11 @@ class ConnectedDevice:
     def connected_to(self) -> ConnectedTo:
         """Return the device connected to."""
         return ConnectedTo(self._raw_data["bridge_port"])
+
+    @property
+    def display_name(self) -> str:
+        """Return the device display name."""
+        return self.name or self.hostname
 
     @property
     def hostname(self) -> str:
@@ -312,14 +327,18 @@ class Gateway(ABC):
         self._cache_dir = cache_dir
 
     @abstractmethod
-    def check_auth(self) -> bool:
+    async def check_auth(self) -> bool:
         """Attempt to authenticate with the device.
 
         Returns whether or not authentication succeeded.
         """
 
     @abstractmethod
-    def get_connected_devices(self) -> dict[str, ConnectedDevice]:
+    async def close_connection(self):
+        """Close the connection."""
+
+    @abstractmethod
+    async def get_connected_devices(self) -> dict[str, ConnectedDevice]:
         """Get the connected devices as a MAC address -> hostname map."""
 
     def get_cache_file(self) -> Path | None:
@@ -352,7 +371,7 @@ class Gateway3100(Gateway):
         self.token = ""
         self.loginToken = ""
 
-        self.session = requests.Session()
+        self.session = aiohttp.ClientSession()
 
         # Attempt to log out when this object is destroyed.
         if not self._local_only:
@@ -361,56 +380,65 @@ class Gateway3100(Gateway):
                 self.session.post,
                 self.host + "/logout.cgi",
                 timeout=TIMEOUT,
-                verify=self.verify,
+                ssl=self.verify,
                 data={"token": self.token},
             )
 
     def __del__(self):
         """Destroy the session."""
+        # self.close_connection()
+
+    async def close_connection(self):
+        """Close the connection."""
         _LOGGER.info("Destroying Gateway client session")
-        self.session.close()
+        await self.session.close()
 
     @classmethod
-    def is_valid_host(cls, host):
+    async def is_valid_host(cls, host):
         """Check if the host is a valid host."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        return (
-            requests.get(
-                "https://" + host + "/loginStatus.cgi", verify=False, timeout=TIMEOUT
-            ).status_code
-            != HTTPStatus.NOT_FOUND
-        )
+        async with aiohttp.ClientSession() as session:
+            return (
+                await session.get(
+                    "https://" + host + "/loginStatus.cgi",
+                    verify=False,
+                    timeout=TIMEOUT,
+                ).status
+                != HTTPStatus.NOT_FOUND
+            )
 
-    def get_connected_devices(self):
+    async def get_connected_devices(self):
         """Get connected devices."""
         if self._local_only:
 
             @dataclass
             class Ret:
-                status_code: HTTPStatus
+                status: HTTPStatus
                 text: str
 
-            with open(self.get_cache_file(), encoding="utf-8") as f:
-                result = json.load(f)
-                res = Ret(status_code=result["status_code"], text=result["text"])
+            with aiofiles.open(self.get_cache_file()) as f:
+                data = await f.read()
+                result = json.load(data)
+                res = Ret(status=result["status_code"], text=result["text"])
         else:
-            res = self.session.get(
-                self.host + "/cgi/cgi_owl.js", timeout=TIMEOUT, verify=self.verify
+            res = await self.session.get(
+                self.host + "/cgi/cgi_owl.js", timeout=TIMEOUT, ssl=self.verify
             )
             if (cache_file := self.get_cache_file()) is not None:
                 with cache_file.open("w") as f:
+                    data = await res.text()
                     json.dump(
-                        {"text": res.text, "status_code": res.status_code},
+                        {"text": data, "status_code": res.status},
                         f,
                         indent=True,
                         sort_keys=True,
                     )
 
-        if res.status_code != HTTPStatus.OK:
+        if res.status != HTTPStatus.OK:
             _LOGGER.warning(
                 "Failed to get connected devices from gateway; "
                 "got HTTP status code %s",
-                res.status_code,
+                res.status,
             )
 
         connected_devices = {}
@@ -475,7 +503,7 @@ class Gateway3100(Gateway):
                         continue
                     connected_devices[mac_addr].add_station_info(data)
 
-        lines = res.text.split("\n")
+        lines = (await res.text()).split("\n")
         known_device_list = ""
         dump_toplogy_station_info = ""
         for line in lines:
@@ -488,49 +516,55 @@ class Gateway3100(Gateway):
 
         return connected_devices
 
-    def _check_login_status(self):
+    async def _check_login_status(self):
         if self._local_only:
             return True
-        res = self.session.get(
-            self.host + "/loginStatus.cgi", timeout=TIMEOUT, verify=self.verify
+        res = await self.session.get(
+            self.host + "/loginStatus.cgi", timeout=TIMEOUT, ssl=self.verify
         )
-        if res.status_code == HTTPStatus.OK:
-            self.loginToken = res.json()["loginToken"]
-            if res.json()["islogin"] == "1":
+        if res.status == HTTPStatus.OK:
+            _text = await res.text()
+            json_res = json.loads(_text)
+            self.loginToken = json_res["loginToken"]
+            if json_res["islogin"] == "1":
                 # Store the XSRF token for use in future requests.
-                self.token = res.json()["token"]
+                self.token = json_res["token"]
                 return True
-        _LOGGER.warning(f"{res.status_code}: {res.reason}")  # noqa: G004
+        _LOGGER.warning(f"{res.status}: {res.reason}")  # noqa: G004
         return False
 
-    def _attempt_old_login(self):
+    async def _attempt_old_login(self):
         body = {
             "luci_username": _encode_luci_string(self.username),
             "luci_password": _encode_luci_string(self.password),
         }
-        res = self.session.post(
-            self.host + "/login.cgi", timeout=TIMEOUT, verify=self.verify, data=body
-        )
+        try:
+            res = await self.session.post(
+                self.host + "/login.cgi", timeout=TIMEOUT, data=body, ssl=self.verify
+            )
+        except aiohttp.client_exceptions.ClientConnectorError:
+            return False
 
-        return self._check_login_success(res)
+        return await self._check_login_success(res)
 
-    def _attempt_new_login(self):
+    async def _attempt_new_login(self):
         body = {
             "luci_username": _encode_luci_string(self.username),
             "luci_password": _encode_luci_password(self.password, self.loginToken),
             "luci_token": self.loginToken,
         }
-        res = self.session.post(
-            self.host + "/login.cgi", timeout=TIMEOUT, verify=self.verify, data=body
+        res = await self.session.post(
+            self.host + "/login.cgi", timeout=TIMEOUT, data=body, ssl=self.verify
         )
-        return self._check_login_success(res)
+        return await self._check_login_success(res)
 
-    def _check_login_success(self, res):
-        if res.status_code in (HTTPStatus.OK, HTTPStatus.FOUND):
-            return self._check_login_status()
+    async def _check_login_success(self, res: aiohttp.ClientResponse):
+        if res.status in (HTTPStatus.OK, HTTPStatus.FOUND):
+            return await self._check_login_status()
 
-        if res.status_code == HTTPStatus.FORBIDDEN:
-            response_json = res.json()
+        if res.status == HTTPStatus.FORBIDDEN:
+            text = await res.text()
+            response_json = json.loads(text)
             if response_json.get("flag") == 2:
                 _LOGGER.warning(
                     "Hit maximum session limit of %s sessions",
@@ -538,18 +572,18 @@ class Gateway3100(Gateway):
                 )
 
         else:
-            _LOGGER.debug("unexpected response code: %s", res.status_code)
+            _LOGGER.debug("unexpected response code: %s", res.status)
         return False
 
-    def check_auth(self):
+    async def check_auth(self):
         """Check authentication."""
-        if self._check_login_status():
+        if await self._check_login_status():
             return True
 
-        if self._attempt_old_login():
+        if await self._attempt_old_login():
             return True
 
-        return self._attempt_new_login()
+        return await self._attempt_new_login()
 
 
 class QuantumGatewayScanner:
@@ -577,15 +611,20 @@ class QuantumGatewayScanner:
     def _get_gateway(self, host, password) -> Gateway:
         if self._local_only:
             return Gateway3100(host, password, self._local_only, self._cache_dir)
-        if Gateway3100.is_valid_host(host):
-            return Gateway3100(host, password, self._local_only, self._cache_dir)
-        raise NotImplementedError
+        return Gateway3100(host, password, self._local_only, self._cache_dir)
+        # if await Gateway3100.is_valid_host(host):
+        #     return Gateway3100(host, password, self._local_only, self._cache_dir)
+        # raise NotImplementedError
 
-    def scan_devices(self) -> list[str]:
+    async def close_connection(self):
+        """Close the connection."""
+        await self._gateway.close_connection()
+
+    async def scan_devices(self) -> list[str]:
         """Scan for new devices and return a list of found MACs."""
         self.connected_devices = {}
-        if self._gateway.check_auth():
-            self.connected_devices = self._gateway.get_connected_devices()
+        if await self._gateway.check_auth():
+            self.connected_devices = await self._gateway.get_connected_devices()
         return list(self.connected_devices.keys())
 
     def get_device_name(self, device: str) -> str | None:
