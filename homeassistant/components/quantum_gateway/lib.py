@@ -27,12 +27,14 @@ class ConnectedTo(Enum):
 
     ROUTER = "br-lan"
     EXTENDER_1 = "br-lan1"
+    UNKNOWN = "unknown"
 
     def display(self) -> str:
         """Return a human-readable string for the connected device type."""
         return {
             ConnectedTo.ROUTER: "Router",
             ConnectedTo.EXTENDER_1: "Extender",
+            ConnectedTo.UNKNOWN: "???",
         }[self]
 
 
@@ -52,6 +54,7 @@ class Port(Enum):
     ATH11 = "ath11"
     ATH12 = "ath12"
     VETH0 = "veth0"
+    VETH3 = "veth3"
     UNKNOWN = "unknown"
 
 
@@ -88,6 +91,7 @@ class ConnectionInterface(Enum):
     ATH1 = "ath1"
     WL1_2 = "wl1.2"
     WL0_2 = "wl0.2"
+    WL0_1 = "wl0.1"
     WL2_2 = "wl2.2"
     ATH12 = "ath12"
     ATH11 = "ath11"
@@ -100,6 +104,7 @@ class ConnectionInterface(Enum):
             ConnectionInterface.WL0: ConnectedTo.EXTENDER_1,
             ConnectionInterface.ATH1: ConnectedTo.ROUTER,
             ConnectionInterface.WL1_2: ConnectedTo.EXTENDER_1,
+            ConnectionInterface.WL0_1: ConnectedTo.UNKNOWN,
             ConnectionInterface.WL0_2: ConnectedTo.EXTENDER_1,
             ConnectionInterface.WL2_2: ConnectedTo.EXTENDER_1,
             ConnectionInterface.ATH12: ConnectedTo.ROUTER,
@@ -136,10 +141,11 @@ class ConnectedDevice:
             "mac",
             "connect_type",
             "connected_to",
-            # "full_state",
+            "is_connected",
+            "full_state",
         ]
 
-    def row_elements(self) -> list[str]:
+    def row_elements(self) -> list[str | bool | dict[str, str]]:
         """Return row elements for the device."""
         return [
             self.display_name,
@@ -147,7 +153,8 @@ class ConnectedDevice:
             self.mac,
             self.connect_type.display(),
             self.connection_interface.display(),
-            # self._as_dict(),
+            self.is_connected,
+            self._raw_data,
         ]
 
     def _as_dict(self) -> dict[str, Any]:
@@ -181,6 +188,11 @@ class ConnectedDevice:
     def connected_to(self) -> ConnectedTo:
         """Return the device connected to."""
         return ConnectedTo(self._raw_data["bridge_port"])
+
+    @property
+    def is_connected(self) -> bool:
+        """Return the device connected to."""
+        return self._raw_data.get("activity", 0) == 1
 
     @property
     def display_name(self) -> str:
@@ -416,9 +428,9 @@ class Gateway3100(Gateway):
                 status: HTTPStatus
                 text: str
 
-            with aiofiles.open(self.get_cache_file()) as f:
+            async with aiofiles.open(self.get_cache_file()) as f:
                 data = await f.read()
-                result = json.load(data)
+                result = json.loads(data)
                 res = Ret(status=result["status_code"], text=result["text"])
         else:
             res = await self.session.get(
@@ -480,8 +492,10 @@ class Gateway3100(Gateway):
                         or "hostname" not in data
                     ):
                         continue
-                    if data["activity"] == 1:
-                        connected_devices[data["mac"]] = ConnectedDevice(data)
+                    # if data["activity"] == 1:
+                    connected_devices[data["mac"]] = ConnectedDevice(data)
+                    # else:
+                    #     print(json.dumps(data, indent=1, sort_keys=True))
             elif node.arguments[0].value == "dump_toplogy_station_info":
                 stations_node = None
                 for prop in node.arguments[1].properties:
@@ -503,7 +517,11 @@ class Gateway3100(Gateway):
                         continue
                     connected_devices[mac_addr].add_station_info(data)
 
-        lines = (await res.text()).split("\n")
+        if isinstance(res.text, str):
+            text = res.text
+        else:
+            text = await res.text()
+        lines = text.split("\n")
         known_device_list = ""
         dump_toplogy_station_info = ""
         for line in lines:
