@@ -245,6 +245,9 @@ aioemonitor==1.0.5
 # homeassistant.components.esphome
 aioesphomeapi==28.0.0
 
+# homeassistant.components.quantum_gateway
+aiofiles==24.1.0
+
 # homeassistant.components.flo
 aioflo==2021.11.0
 
@@ -876,6 +879,9 @@ eq3btsmart==1.4.1
 
 # homeassistant.components.esphome
 esphome-dashboard-api==1.2.3
+
+# homeassistant.components.quantum_gateway
+esprima==4.0.1
 
 # homeassistant.components.netgear_lte
 eternalegypt==0.0.16
@@ -2559,9 +2565,6 @@ qingping-ble==0.10.0
 # homeassistant.components.qnap
 qnapstats==0.4.0
 
-# homeassistant.components.quantum_gateway
-quantum-gateway==0.0.8
-
 # homeassistant.components.radio_browser
 radios==0.3.2
 
@@ -2955,6 +2958,9 @@ upcloud-api==2.6.0
 # homeassistant.components.syncthru
 # homeassistant.components.zwave_me
 url-normalize==1.4.3
+
+# homeassistant.components.quantum_gateway
+urllib3==1.26.20
 
 # homeassistant.components.uvc
 uvcclient==0.12.1
