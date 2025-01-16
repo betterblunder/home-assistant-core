@@ -7,10 +7,7 @@ from homeassistant.core import Event, HomeAssistant
 from .lib import QuantumGatewayScanner
 
 QuantumGatewayConfigEntry = ConfigEntry[QuantumGatewayScanner]
-PLATFORMS = [
-    Platform.DEVICE_TRACKER
-    #  , Platform.SENSOR
-]
+PLATFORMS = [Platform.DEVICE_TRACKER, Platform.SENSOR]
 
 
 async def async_setup_entry(

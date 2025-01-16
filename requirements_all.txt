@@ -269,6 +269,9 @@ aiohasupervisor==0.2.2b5
 # homeassistant.components.homekit_controller
 aiohomekit==3.2.7
 
+# homeassistant.components.quantum_gateway
+aiohttp==3.11.11
+
 # homeassistant.components.mcp_server
 aiohttp_sse==2.2.0
 

@@ -73,7 +73,7 @@ class ConnectionType(Enum):
         """Return a human-readable string for the connection type."""
         return {
             ConnectionType.WIFI_5_GHZ: "5 GHz",
-            ConnectionType.WIFI_5H_GHZ: "5 GHz",
+            ConnectionType.WIFI_5H_GHZ: "5 GHz (H)",
             ConnectionType.WIFI_2_4_GHZ: "2.4 GHz",
             ConnectionType.GUEST_2_4_GHZ: "2.4 GHz Guest",
             ConnectionType.IOT_2_4_GHZ: "2.4 GHz IoT",

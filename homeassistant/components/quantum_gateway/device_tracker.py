@@ -71,6 +71,11 @@ def add_entities(
     async_add_entities(new_tracked)
 
 
+def _normalize_name(name: str) -> str:
+    """Normalize a name."""
+    return name.replace("_", " ").replace("-", " ")
+
+
 class QuantumGatewayDeviceEntity(ScannerEntity):
     """Represent a tracked device."""
 
@@ -94,7 +99,7 @@ class QuantumGatewayDeviceEntity(ScannerEntity):
     @property
     def hostname(self) -> str:
         """Return the hostname of the device."""
-        return self._device.display_name
+        return _normalize_name(self._device.display_name)
 
     @property
     def ip_address(self) -> str:
@@ -136,5 +141,5 @@ class QuantumGatewayDeviceEntity(ScannerEntity):
         if connection_type == ConnectionType.IOT_2_4_GHZ:
             return "mdi:wifi-cog"
 
-        _LOGGER.warning(f"Unknown connection type {connection_type.name}")  # noqa: G004
+        _LOGGER.debug(f"Unknown connection type {connection_type.name}")  # noqa: G004
         return "mdi:lan-disconnect"
