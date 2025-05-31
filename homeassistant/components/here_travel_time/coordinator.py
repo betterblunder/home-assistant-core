@@ -25,6 +25,7 @@ from here_transit import (
 )
 import voluptuous as vol
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfLength
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
@@ -40,13 +41,20 @@ BACKOFF_MULTIPLIER = 1.1
 
 _LOGGER = logging.getLogger(__name__)
 
+type HereConfigEntry = ConfigEntry[
+    HERETransitDataUpdateCoordinator | HERERoutingDataUpdateCoordinator
+]
+
 
 class HERERoutingDataUpdateCoordinator(DataUpdateCoordinator[HERETravelTimeData]):
     """here_routing DataUpdateCoordinator."""
 
+    config_entry: HereConfigEntry
+
     def __init__(
         self,
         hass: HomeAssistant,
+        config_entry: HereConfigEntry,
         api_key: str,
         config: HERETravelTimeConfig,
     ) -> None:
@@ -54,6 +62,7 @@ class HERERoutingDataUpdateCoordinator(DataUpdateCoordinator[HERETravelTimeData]
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
@@ -168,9 +177,12 @@ class HERETransitDataUpdateCoordinator(
 ):
     """HERETravelTime DataUpdateCoordinator."""
 
+    config_entry: HereConfigEntry
+
     def __init__(
         self,
         hass: HomeAssistant,
+        config_entry: HereConfigEntry,
         api_key: str,
         config: HERETravelTimeConfig,
     ) -> None:
@@ -178,6 +190,7 @@ class HERETransitDataUpdateCoordinator(
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )

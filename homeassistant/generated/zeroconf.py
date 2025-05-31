@@ -128,6 +128,10 @@ HOMEKIT = {
         "always_discover": True,
         "domain": "lifx",
     },
+    "LIFX Luna": {
+        "always_discover": True,
+        "domain": "lifx",
+    },
     "LIFX Mini": {
         "always_discover": True,
         "domain": "lifx",
@@ -525,6 +529,11 @@ ZEROCONF = {
             "domain": "homekit_controller",
         },
     ],
+    "_homeconnect._tcp.local.": [
+        {
+            "domain": "home_connect",
+        },
+    ],
     "_homekit._tcp.local.": [
         {
             "domain": "homekit",
@@ -710,6 +719,11 @@ ZEROCONF = {
             "domain": "thread",
         },
     ],
+    "_mieleathome._tcp.local.": [
+        {
+            "domain": "miele",
+        },
+    ],
     "_miio._udp.local.": [
         {
             "domain": "xiaomi_aqara",
@@ -801,6 +815,11 @@ ZEROCONF = {
     "_rio._tcp.local.": [
         {
             "domain": "russound_rio",
+        },
+    ],
+    "_shelly._tcp.local.": [
+        {
+            "domain": "shelly",
         },
     ],
     "_sideplay._tcp.local.": [

@@ -88,6 +88,7 @@ OSI_APPROVED_LICENSES_SPDX = {
     "MPL-1.1",
     "MPL-2.0",
     "PSF-2.0",
+    "Python-2.0",
     "Unlicense",
     "Zlib",
     "ZPL-2.1",
@@ -180,7 +181,6 @@ EXCEPTIONS = {
     "PyMicroBot",  # https://github.com/spycle/pyMicroBot/pull/3
     "PySwitchmate",  # https://github.com/Danielhiversen/pySwitchmate/pull/16
     "PyXiaomiGateway",  # https://github.com/Danielhiversen/PyXiaomiGateway/pull/201
-    "aioecowitt",  # https://github.com/home-assistant-libs/aioecowitt/pull/180
     "chacha20poly1305",  # LGPL
     "commentjson",  # https://github.com/vaidik/commentjson/pull/55
     "crownstone-cloud",  # https://github.com/crownstone/crownstone-lib-python-cloud/pull/5
@@ -201,7 +201,6 @@ EXCEPTIONS = {
     "pybbox",  # https://github.com/HydrelioxGitHub/pybbox/pull/5
     "pysabnzbd",  # https://github.com/jeradM/pysabnzbd/pull/6
     "pyvera",  # https://github.com/maximvelichko/pyvera/pull/164
-    "repoze.lru",
     "sharp_aquos_rc",  # https://github.com/jmoore987/sharp_aquos_rc/pull/14
     "tapsaff",  # https://github.com/bazwilliams/python-taps-aff/pull/5
 }

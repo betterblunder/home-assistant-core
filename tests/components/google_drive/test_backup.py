@@ -17,6 +17,7 @@ from homeassistant.components.backup import (
 )
 from homeassistant.components.google_drive import DOMAIN
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.backup import async_initialize_backup
 from homeassistant.setup import async_setup_component
 
 from .conftest import CONFIG_ENTRY_TITLE, TEST_AGENT_ID
@@ -48,11 +49,13 @@ TEST_AGENT_BACKUP_RESULT = {
     "database_included": True,
     "date": "2025-01-01T01:23:45.678Z",
     "extra_metadata": {"with_automatic_settings": False},
+    "failed_addons": [],
+    "failed_agent_ids": [],
+    "failed_folders": [],
     "folders": [],
     "homeassistant_included": True,
     "homeassistant_version": "2024.12.0",
     "name": "Test",
-    "failed_agent_ids": [],
     "with_automatic_settings": None,
 }
 
@@ -63,7 +66,8 @@ async def setup_integration(
     config_entry: MockConfigEntry,
     mock_api: MagicMock,
 ) -> None:
-    """Set up Google Drive integration."""
+    """Set up Google Drive and backup integrations."""
+    async_initialize_backup(hass)
     config_entry.add_to_hass(hass)
     assert await async_setup_component(hass, BACKUP_DOMAIN, {BACKUP_DOMAIN: {}})
     mock_api.list_files = AsyncMock(
@@ -245,9 +249,9 @@ async def test_agents_download_file_not_found(
     resp = await client.get(
         f"/api/backup/download/{TEST_AGENT_BACKUP.backup_id}?agent_id={TEST_AGENT_ID}"
     )
-    assert resp.status == 500
+    assert resp.status == 404
     content = await resp.content.read()
-    assert "Backup not found" in content.decode()
+    assert content == b""
 
 
 async def test_agents_download_metadata_not_found(
@@ -281,7 +285,7 @@ async def test_agents_upload(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test agent upload backup."""
-    mock_api.upload_file = AsyncMock(return_value=None)
+    mock_api.resumable_upload_file = AsyncMock(return_value=None)
 
     client = await hass_client()
 
@@ -306,7 +310,7 @@ async def test_agents_upload(
     assert f"Uploading backup: {TEST_AGENT_BACKUP.backup_id}" in caplog.text
     assert f"Uploaded backup: {TEST_AGENT_BACKUP.backup_id}" in caplog.text
 
-    mock_api.upload_file.assert_called_once()
+    mock_api.resumable_upload_file.assert_called_once()
     assert [tuple(mock_call) for mock_call in mock_api.mock_calls] == snapshot
 
 
@@ -322,7 +326,7 @@ async def test_agents_upload_create_folder_if_missing(
     mock_api.create_file = AsyncMock(
         return_value={"id": "new folder id", "name": "Home Assistant"}
     )
-    mock_api.upload_file = AsyncMock(return_value=None)
+    mock_api.resumable_upload_file = AsyncMock(return_value=None)
 
     client = await hass_client()
 
@@ -348,7 +352,7 @@ async def test_agents_upload_create_folder_if_missing(
     assert f"Uploaded backup: {TEST_AGENT_BACKUP.backup_id}" in caplog.text
 
     mock_api.create_file.assert_called_once()
-    mock_api.upload_file.assert_called_once()
+    mock_api.resumable_upload_file.assert_called_once()
     assert [tuple(mock_call) for mock_call in mock_api.mock_calls] == snapshot
 
 
@@ -359,7 +363,9 @@ async def test_agents_upload_fail(
     mock_api: MagicMock,
 ) -> None:
     """Test agent upload backup fails."""
-    mock_api.upload_file = AsyncMock(side_effect=GoogleDriveApiError("some error"))
+    mock_api.resumable_upload_file = AsyncMock(
+        side_effect=GoogleDriveApiError("some error")
+    )
 
     client = await hass_client()
 

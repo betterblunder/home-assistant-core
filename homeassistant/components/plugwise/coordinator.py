@@ -24,19 +24,22 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import DEFAULT_PORT, DEFAULT_USERNAME, DOMAIN, LOGGER
 
+type PlugwiseConfigEntry = ConfigEntry[PlugwiseDataUpdateCoordinator]
+
 
 class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData]]):
     """Class to manage fetching Plugwise data from single endpoint."""
 
     _connected: bool = False
 
-    config_entry: ConfigEntry
+    config_entry: PlugwiseConfigEntry
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, hass: HomeAssistant, config_entry: PlugwiseConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
             LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=60),
             # Don't refresh immediately, give the device time to process
@@ -96,12 +99,10 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
                 translation_key="unsupported_firmware",
             ) from err
 
-        self._async_add_remove_devices(data, self.config_entry)
+        self._async_add_remove_devices(data)
         return data
 
-    def _async_add_remove_devices(
-        self, data: dict[str, GwEntityData], entry: ConfigEntry
-    ) -> None:
+    def _async_add_remove_devices(self, data: dict[str, GwEntityData]) -> None:
         """Add new Plugwise devices, remove non-existing devices."""
         # Check for new or removed devices
         self.new_devices = set(data) - self._current_devices
@@ -109,11 +110,9 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
         self._current_devices = set(data)
 
         if removed_devices:
-            self._async_remove_devices(data, entry)
+            self._async_remove_devices(data)
 
-    def _async_remove_devices(
-        self, data: dict[str, GwEntityData], entry: ConfigEntry
-    ) -> None:
+    def _async_remove_devices(self, data: dict[str, GwEntityData]) -> None:
         """Clean registries when removed devices found."""
         device_reg = dr.async_get(self.hass)
         device_list = dr.async_entries_for_config_entry(
@@ -133,7 +132,8 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
                         and identifier[1] not in data
                     ):
                         device_reg.async_update_device(
-                            device_entry.id, remove_config_entry_id=entry.entry_id
+                            device_entry.id,
+                            remove_config_entry_id=self.config_entry.entry_id,
                         )
                         LOGGER.debug(
                             "Removed %s device %s %s from device_registry",
