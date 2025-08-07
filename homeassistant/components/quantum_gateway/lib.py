@@ -197,7 +197,7 @@ class ConnectedDevice:
     @property
     def display_name(self) -> str:
         """Return the device display name."""
-        return self.name or self.hostname
+        return self.suggested_name or self.name or self.hostname
 
     @property
     def hostname(self) -> str:

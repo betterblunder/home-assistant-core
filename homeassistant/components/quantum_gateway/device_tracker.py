@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
+import logging
 
 from homeassistant.components.device_tracker import ScannerEntity, SourceType
 from homeassistant.core import HomeAssistant, ServiceCall, callback

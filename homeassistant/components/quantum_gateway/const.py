@@ -4,4 +4,4 @@ DOMAIN = "quantum_gateway"
 DEFAULT_HOST = "mynetworksettings.com"
 
 SERVICE_UPDATE_ROUTER = "update_router"
-DEFAULT_UPDATE_INTERVAL_MINUTES = 1
+DEFAULT_UPDATE_INTERVAL_MINUTES = 2
