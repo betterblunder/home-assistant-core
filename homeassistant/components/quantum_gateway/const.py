@@ -1,7 +1,7 @@
-"""Constants for Quantum Gateway."""
+"""Constants for the Quantum Gateway integration."""
 
-import logging
+DOMAIN = "quantum_gateway"
+DEFAULT_HOST = "mynetworksettings.com"
 
-LOGGER = logging.getLogger(__package__)
-
-DEFAULT_HOST = "myfiosgateway.com"
+SERVICE_UPDATE_ROUTER = "update_router"
+DEFAULT_UPDATE_INTERVAL_MINUTES = 2

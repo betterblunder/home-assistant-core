@@ -513,6 +513,7 @@ FLOWS = {
         "qingping",
         "qnap",
         "qnap_qsw",
+        "quantum_gateway",
         "rabbitair",
         "rachio",
         "radarr",
